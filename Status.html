@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta http-equiv="Content-Security-Policy" 
+          content="default-src 'self'; 
+                   script-src 'self' https://cdn.tailwindcss.com 'unsafe-inline'; 
+                   style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; 
+                   font-src 'self' https://fonts.gstatic.com; 
+                   img-src 'self' https://placehold.co data:; 
+                   connect-src 'self'; /* Erlaube Verbindungen zum eigenen Ursprung (z.B. für Logging-API) */
+                   frame-ancestors 'none'; /* Verhindert Einbetten in Frames/Iframes (Clickjacking-Schutz) */
+                   object-src 'none'; /* Verhindert <object>, <embed>, <applet> */
+                   base-uri 'self'; /* Beschränkt <base> URLs */
+                   form-action 'self'; /* Beschränkt Formular-Ziele */
+                   upgrade-insecure-requests;">
+
+    <meta http-equiv="X-Frame-Options" content="DENY">
+
+    <meta http-equiv="Permissions-Policy" 
+          content="camera=(), 
+                   microphone=(), 
+                   geolocation=(), 
+                   payment=(), 
+                   usb=(), 
+                   bluetooth=(), 
+                   magnetometer=(), 
+                   gyroscope=(), 
+                   accelerometer=(),
+                   autoplay=(),
+                   display-capture=(),
+                   document-domain=(),
+                   encrypted-media=(),
+                   fullscreen=(),
+                   interest-cohort=(),
+                   midi=(),
+                   picture-in-picture=(),
+                   publickey-credentials-get=(),
+                   screen-wake-lock=(),
+                   sync-xhr=(),
+                   xr-spatial-tracking=()">
+    
+    <!-- 
+        Strict-Transport-Security (HSTS): Erzwingt HTTPS nach dem ersten Besuch.
+        Beispiel: Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+
+        X-Content-Type-Options: Verhindert MIME-Sniffing.
+        Beispiel: X-Content-Type-Options: nosniff
+
+        Referrer-Policy: Kontrolliert, welche Referrer-Informationen gesendet werden.
+        Beispiel: Referrer-Policy: strict-origin-when-cross-origin
+    -->
+
+    <title>Checkout – Ihr exklusiver Einkauf</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #030703; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 1rem; 
+            color: #D1D5DB; 
+            position: relative; 
+            overflow: hidden; 
+        }
+
+        #particleCanvas {
+            position: fixed; 
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1; 
+            pointer-events: none; 
+        }
+
+        .checkout-container {
+            max-width: 460px; 
+            background-color: rgba(0, 0, 0, 0.85); 
+            backdrop-filter: blur(10px) saturate(120%); 
+            border: 1px solid rgba(0, 255, 100, 0.2); 
+            border-radius: 18px; 
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0,255,100,0.15) inset; 
+            overflow: visible; 
+            position: relative; 
+            z-index: 1; 
+        }
+
+        .product-image-wrapper {
+            width: 60px;
+            height: 60px;
+            background-color: rgba(0, 255, 100, 0.05); 
+            border-radius: 10px;
+            padding: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(0, 255, 100, 0.1);
+            flex-shrink: 0; 
+        }
+        .product-image-wrapper img, .product-image-wrapper svg {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 6px;
+        }
+         .product-image-wrapper svg {
+            stroke: rgba(0, 255, 100, 0.7); 
+         }
+
+
+        .button-base {
+            border-radius: 10px; 
+            font-weight: 500; 
+            padding: 13px 20px; 
+            transition: all 0.2s ease-in-out;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.7rem; 
+            border: 1px solid transparent;
+            letter-spacing: 0.025em; 
+            min-height: 44px; 
+        }
+
+        .button-paypal { 
+            background-color: #00DF50; 
+            color: #030703; 
+            box-shadow: 0 2px 8px rgba(0, 223, 80, 0.3); 
+        }
+        .button-paypal:hover {
+            background-color: #00B843; 
+            transform: translateY(-1.5px) scale(1.01); 
+            box-shadow: 0 4px 12px rgba(0, 223, 80, 0.4);
+        }
+
+        .button-crypto { 
+            background-color: rgba(0, 255, 100, 0.1); 
+            color: #90EE90; 
+            border: 1px solid rgba(0, 255, 100, 0.3); 
+            box-shadow: 0 2px 8px rgba(0, 255, 100, 0.05);
+        }
+        .button-crypto:hover {
+            background-color: rgba(0, 255, 100, 0.15);
+            border-color: rgba(0, 255, 100, 0.4);
+            transform: translateY(-1.5px) scale(1.01);
+            box-shadow: 0 4px 12px rgba(0, 255, 100, 0.1);
+        }
+        .button-paypal svg, .button-crypto svg { 
+            fill: currentColor; 
+            stroke: currentColor; 
+        }
+
+
+        .text-header { color: #E0FFE0; } 
+        .text-subheader { color: #70A070; } 
+        .text-body { color: #B0D0B0; } 
+        .text-accent { color: #00FF50; } 
+        .text-price { color: #E0FFE0; font-weight: 600; }
+
+        .modal-content {
+            background-color: rgba(0, 5, 0, 0.95); 
+            border: 1px solid rgba(0, 255, 100, 0.25); 
+            color: #B0D0B0;
+            border-radius: 14px; 
+        }
+
+        .custom-dropdown-trigger {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            padding: 14px 18px;
+            background-color: rgba(0, 255, 100, 0.03);
+            border: 1px solid rgba(0, 255, 100, 0.15);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease; 
+            font-size: 0.9rem;
+            color: #B0D0B0;
+            text-align: left;
+            min-height: 44px; 
+        }
+        .custom-dropdown-trigger:hover {
+            background-color: rgba(0, 255, 100, 0.06);
+            border-color: rgba(0, 255, 100, 0.25);
+        }
+        .custom-dropdown-trigger.is-open { 
+             border-color: #00FF50; 
+             box-shadow: 0 0 0 1.5px #00FF50; 
+        }
+        .custom-dropdown-trigger #dropdownArrow {
+            color: rgba(0, 255, 100, 0.6); 
+        }
+
+        .dropdown-arrow {
+            transition: transform 0.25s ease-in-out; 
+        }
+        .dropdown-arrow.is-open { 
+            transform: rotate(180deg);
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: calc(100% + 6px); 
+            left: 0;
+            right: 0;
+            background-color: #050A05; 
+            border: 1px solid rgba(0, 255, 100, 0.2);
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0, 30, 10, 0.3); 
+            z-index: 50;
+            overflow: hidden; 
+            padding: 6px 0; 
+            opacity: 0;
+            max-height: 0;
+            visibility: hidden;
+            transform: translateY(-10px); 
+            transition: opacity 0.25s ease-out, max-height 0.25s ease-out, transform 0.25s ease-out, visibility 0s linear 0.25s;
+        }
+
+        .dropdown-menu.is-open { 
+            opacity: 1;
+            max-height: 200px; 
+            visibility: visible;
+            transform: translateY(0);
+            transition: opacity 0.25s ease-in, max-height 0.25s ease-in, transform 0.25s ease-in, visibility 0s linear 0s;
+        }
+
+        .dropdown-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 18px;
+            font-size: 0.9rem;
+            color: #B0D0B0;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+            min-height: 40px; 
+        }
+        .dropdown-item:hover {
+            background-color: rgba(0, 255, 100, 0.08);
+        }
+        .dropdown-item.selected {
+            background-color: rgba(0, 255, 100, 0.15);
+            color: #E0FFE0;
+            font-weight: 500;
+        }
+        .dropdown-item .item-name {
+            font-weight: 500;
+        }
+        .dropdown-item .item-price {
+            font-size: 0.8rem;
+            color: #70A070;
+        }
+        .dropdown-item.selected .item-price {
+            color: #B0D0B0;
+        }
+
+    </style>
+</head>
+<body>
+    <canvas id="particleCanvas"></canvas>
+
+    <div class="checkout-container w-full p-4 sm:p-6 md:p-8">
+        <header class="text-center mb-6 sm:mb-8"> <h1 class="text-xl sm:text-2xl md:text-3xl font-semibold text-header">Bestellung</h1>
+            <p class="text-subheader mt-1.5 text-xs sm:text-sm">Schließen Sie Ihren Einkauf sicher ab.</p> </header>
+
+        <section id="productDisplay" class="mb-6 p-4 sm:p-5 bg-transparent rounded-lg"> <div class="flex items-center space-x-3 sm:space-x-4"> <div id="productImageContainer" class="product-image-wrapper flex-shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shopping-bag"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                </div>
+                <div class="flex-grow min-w-0">
+                    <h3 id="displayedProductName" class="text-base sm:text-lg font-medium text-body">Bo6/Wz Accounts – Phone Verified</h3>
+                    <p id="displayedProductDescription" class="text-xs sm:text-sm text-subheader mt-0.5">Wählen Sie Ihr gewünschtes Pack.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="packSelection" class="mb-6 sm:mb-7 relative"> 
+            <h2 class="text-xs sm:text-sm font-medium text-subheader mb-2 sm:mb-3 px-1">Wählen Sie Ihr Paket:</h2>
+            <div id="customDropdown" class="relative">
+                <button id="dropdownTrigger" type="button" class="custom-dropdown-trigger">
+                    <span id="selectedPackNameDisplay" class="truncate">Wählen Sie ein Pack...</span> <svg id="dropdownArrow" class="dropdown-arrow w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+                <div id="dropdownMenu" class="dropdown-menu"> 
+                    {/* Optionen werden hier per JS eingefügt */}
+                </div>
+            </div>
+        </section>
+
+        <section id="totalPriceSection" class="mb-6 sm:mb-8 p-4 sm:p-5 bg-black/20 rounded-lg"> 
+             <div>
+                <p class="text-base sm:text-lg md:text-xl font-semibold text-body flex justify-between items-center">
+                    <span>Gesamtbetrag:</span>
+                    <span id="displayedProductPrice" class="text-price text-lg sm:text-xl md:text-2xl">Preis...</span>
+                </p>
+            </div>
+        </section>
+
+        <section id="paymentOptions">
+            <form id="paymentForm" style="display: none;">
+                <input type="hidden" name="csrf_token" id="csrfTokenInput" value="">
+                <input type="hidden" name="selected_pack_quantity" id="selectedPackQuantityInput" value="">
+                <input type="hidden" name="selected_pack_price" id="selectedPackPriceInput" value="">
+            </form>
+            <div class="space-y-3 sm:space-y-3.5"> 
+                <button id="paypalButton" class="button-base button-paypal w-full">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8.332 20.657c.52 0 .981-.136 1.383-.407.026.135.055.268.087.398.101.397.255.77.46 1.118.566.963 1.42 1.629 2.557 1.998.286.093.582.14.886.14.99 0 1.882-.494 2.45-1.328.423-.622.638-1.38.638-2.277 0-1.242-.502-2.294-1.508-3.157-.992-.85-2.32-1.277-3.988-1.277h-1.228c-.211 0-.397-.023-.558-.07a1.53 1.53 0 0 1-.56-.265c-.157-.13-.281-.316-.372-.558-.093-.242-.14-.533-.14-.874 0-.503.164-.91.492-1.22.328-.308.764-.463 1.308-.463.493 0 .91.112 1.25.338.342.226.606.534.794.925.046.093.102.183.168.27.066.087.145.16.237.217l1.682-1.01c-.14-.23-.297-.445-.47-.646a4.23 4.23 0 0 0-.687-.708 4.394 4.394 0 0 0-.85-.552 4.172 4.172 0 0 0-.98-.345 4.279 4.279 0 0 0-1.065-.118c-1.31 0-2.363.472-3.157 1.417-.795.945-1.192 2.162-1.192 3.65 0 .91.273 1.72.82 2.43.545.708 1.32 1.193 2.324 1.45l-.224.046c-.44.078-.836.117-1.187.117Z"/><path d="M10.02 11.085c.52 0 .98-.136 1.383-.407.026.135.055.268.087.398.101.397.255.77.46 1.118.566.963 1.42 1.629 2.557 1.998.286.093.582.14.886.14.99 0 1.882-.494 2.45-1.328.423-.622.638-1.38.638-2.277 0-1.242-.502-2.294-1.508-3.157-.992-.85-2.32-1.277-3.988-1.277h-1.228c-.211 0-.397-.023-.558-.07a1.53 1.53 0 0 1-.56-.265c-.157-.13-.281-.316-.372-.558-.093-.242-.14-.533-.14-.874 0-.503.164-.91.492-1.22.328-.308.764-.463 1.308-.463.493 0 .91.112 1.25.338.342.226.606.534.794.925.046.093.102.183.168.27.066.087.145.16.237.217l1.682-1.01c-.14-.23-.297-.445-.47-.646a4.23 4.23 0 0 0-.687-.708 4.394 4.394 0 0 0-.85-.552 4.172 4.172 0 0 0-.98-.345 4.279 4.279 0 0 0-1.065-.118c-1.31 0-2.363.472-3.157 1.417C3.27 7.21 2.873 8.428 2.873 9.915c0 .91.273 1.72.82 2.43.545.708 1.32 1.193 2.324 1.45l-.224.046c-.44.078-.836.117-1.187.117H3.33c-.52 0-.98-.136-1.383-.407a2.409 2.409 0 0 1-.087-.398 2.43 2.43 0 0 1-.46-1.118C.834 10.93.003 9.79.003 8.43c0-.99.493-1.882 1.328-2.45.622-.424 1.38-.638 2.277-.638 1.242 0 2.294.502 3.157 1.508.85.992 1.277 2.32 1.277 3.988v1.228c0 .21-.023.397-.07.558a1.53 1.53 0 0 1-.265.56c-.13.157-.316.281-.558.372-.242.093-.533.14-.874.14Z" transform="translate(2.484 1.343)"/></svg>
+                    <span>PayPal</span>
+                </button>
+
+                <button id="cryptoButton" class="button-base button-crypto w-full">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bitcoin"><path d="M11.767 19.089c3.88.717 7.095-.596 7.095-2.367 0-1.423-1.938-2.388-4.834-2.933-2.895-.545-3.756-.93-3.756-1.622 0-.46.74-.825 2.02-.825 1.215 0 2.055.368 2.837.81.603.337 1.016.762 1.016 1.412 0 .27-.042.505-.123.707l2.242.89c.202-.52.303-1.075.303-1.657 0-1.185-.803-2.122-2.184-2.6-.81-.27-1.738-.405-2.72-.405-3.453 0-6.316 1.002-6.316 3.088 0 1.52.98 2.474 3.518 2.995 2.805.577 3.916.946 3.916 1.672 0 .545-.89.91-2.168.91-1.38 0-2.4-.428-3.164-.93-.585-.383-1.03-.863-1.03-1.528 0-.226.042-.46.124-.673l-2.242-.89a5.23 5.23 0 0 0-.303 1.613c0 1.248.93 2.22 2.44 2.73Z"/><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10Z"/></svg>
+                    <span>Kryptowährung</span>
+                </button>
+            </div>
+        </section>
+
+        <footer class="text-center mt-8 sm:mt-10"> <p class="text-xs text-subheader/70">&copy; <span id="currentYear"></span> Ihr Premium Anbieter. Alle Rechte vorbehalten.</p>
+        </footer>
+
+        <div id="messageModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm overflow-y-auto h-full w-full flex items-center justify-center px-4" style="display: none; z-index: 9999;">
+            <div class="modal-content p-5 sm:p-6 rounded-lg shadow-2xl w-11/12 max-w-md mx-auto text-left"> 
+                <div class="flex justify-between items-center mb-4">
+                    <h3 id="messageModalTitle" class="text-lg font-medium text-header">Mitteilung</h3>
+                    <button id="modalCloseButton" class="text-gray-500 hover:text-gray-300 transition-colors p-1 -mr-1"> <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+                <div class="mb-5">
+                    <p id="messageModalText" class="text-sm text-body">...</p>
+                </div>
+                <div class="text-right">
+                    <button id="closeModalButton" class="button-base bg-accent hover:bg-green-500 text-black py-2 sm:py-2.5 px-4 sm:px-5 text-xs sm:text-sm"> 
+                        Verstanden
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Globale Variablen und Konstanten für Sicherheit und Funktionalität ---
+        const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 Minuten Inaktivitäts-Timeout
+        const MAX_PAYMENT_ATTEMPTS = 3; // Maximale Zahlungsversuche für Rate Limiting
+        const PAYMENT_ATTEMPT_WINDOW = 5 * 60 * 1000; // Zeitfenster für Rate Limiting (5 Minuten)
+
+        let inactivityTimer;
+        let paymentAttempts = 0;
+        let firstPaymentAttemptTimestamp = 0;
+        let devToolsWarningShown = false;
+        let csrfToken = null; // Wird beim Laden generiert
+
+        // --- Sicherheitsfunktionen ---
+
+        /**
+         * Generiert ein einfaches (Dummy) CSRF-Token. 
+         * In einer echten Anwendung würde dieses vom Server kommen und serverseitig validiert werden.
+         */
+        function generateCsrfToken() {
+            // Erzeugt einen zufälligen String
+            return Array.from(crypto.getRandomValues(new Uint8Array(16)))
+                .map(b => b.toString(16).padStart(2, '0'))
+                .join('');
+        }
+
+        /**
+         * Zeigt eine Warnung bei geöffneten Entwicklertools.
+         */
+        function showDevToolsWarning() {
+            if (!devToolsWarningShown) {
+                showMessage('Sicherheitshinweis', 'Die Nutzung von Entwicklertools auf dieser Seite kann unerwartetes Verhalten oder Sicherheitsrisiken verursachen. Bitte mit Vorsicht verwenden.');
+                devToolsWarningShown = true;
+                logError("DevTools geöffnet oder Tastenkombination gedrückt.", "Security Event");
+            }
+        }
+        
+        // Event Listener für DevTools-Tastenkombinationen
+        window.addEventListener('keydown', function(e) {
+            if (e.key === "F12" ||
+                (e.ctrlKey && e.shiftKey && (e.key === "I" || e.key === "J" || e.key === "C")) ||
+                (e.metaKey && e.altKey && (e.key === "I" || e.key === "J" || e.key === "C")) // MacOS
+            ) {
+                // e.preventDefault(); // Verhindert das Öffnen nicht zuverlässig und kann legitime Nutzung stören.
+                showDevToolsWarning();
+            }
+        });
+        
+        // Kontextmenü blockieren (Rechtsklick), um "Untersuchen" zu erschweren (kann umgangen werden und die UX beeinträchtigen).
+        // Auskommentiert, da es oft als störend empfunden wird. Bei Bedarf einkommentieren.
+        // window.addEventListener('contextmenu', function(e) {
+        //     e.preventDefault();
+        //     showDevToolsWarning(); 
+        // });
+
+
+        /**
+         * Überprüft, ob die Seite über HTTPS geladen wird.
+         * Zeigt eine Warnung, wenn nicht (außer auf localhost und .local Domains).
+         */
+        function checkHTTPS() {
+            if (window.location.protocol !== "https:" && 
+                window.location.hostname !== "localhost" && 
+                window.location.hostname !== "127.0.0.1" &&
+                !window.location.hostname.endsWith('.local') 
+            ) {
+                showMessage("Sicherheitswarnung", "Diese Seite wird nicht über eine sichere HTTPS-Verbindung geladen. Sensible Daten könnten gefährdet sein. Bitte stellen Sie sicher, dass Sie über HTTPS auf diese Seite zugreifen.");
+                logError("Seite nicht über HTTPS geladen.", "Security Warning");
+                // Optional: Umleitung zu HTTPS (kann Probleme verursachen, wenn der Server nicht korrekt konfiguriert ist)
+                // window.location.href = "https:" + window.location.href.substring(window.location.protocol.length);
+            }
+        }
+
+        /**
+         * Bereinigt einen String, um ihn sicher als Textinhalt anzuzeigen (XSS-Schutz).
+         * Verhindert, dass der String als HTML interpretiert wird, indem Sonderzeichen in HTML-Entitäten umgewandelt werden.
+         * @param {string} input Der zu bereinigende String.
+         * @returns {string} Der bereinigte String oder ein Leerstring bei ungültiger Eingabe.
+         */
+        function sanitizeForTextDisplay(input) {
+            if (typeof input !== 'string') return ''; 
+            const tempDiv = document.createElement('div');
+            tempDiv.textContent = input; 
+            return tempDiv.innerHTML;    
+        }
+        
+        /**
+         * Bereinigt eine URL, um grundlegende XSS-Versuche und unsichere Protokolle zu verhindern.
+         * @param {string} url Die zu bereinigende URL.
+         * @returns {string} Die bereinigte URL oder ein Leerstring.
+         */
+        function sanitizeUrl(url) {
+            if (typeof url !== 'string' || url.trim() === '') return '';
+            const lowerUrl = url.toLowerCase();
+            
+            // Whitelist für erlaubte Protokolle (erweitern bei Bedarf)
+            const allowedProtocols = ['http:', 'https:', 'data:image/png', 'data:image/jpeg', 'data:image/gif', 'data:image/webp', 'data:image/svg+xml'];
+            let isValidProtocol = false;
+            try {
+                const parsedUrl = new URL(url, window.location.origin); // Basis-URL für relative Pfade
+                isValidProtocol = allowedProtocols.includes(parsedUrl.protocol);
+            } catch (e) {
+                // Ungültige URL, z.B. "javascript:..." ohne Basis
+                isValidProtocol = allowedProtocols.some(p => lowerUrl.startsWith(p));
+            }
+
+
+            if (!isValidProtocol ||
+                lowerUrl.includes('<script') || 
+                lowerUrl.includes('onerror=') ||
+                lowerUrl.includes('onload=')) { // Zusätzlicher Check für Event-Handler
+                console.warn('Sicherheitswarnung: Potenziell gefährliche oder nicht erlaubte URL blockiert:', url);
+                logError(`Blockierte gefährliche/unerlaubte URL: ${url}`, "Security Warning");
+                return `https://placehold.co/60x60/FF0000/FFFFFF?text=Error`; // Fallback-Bild
+            }
+            // Einfache Bereinigung von Anführungszeichen, um Attribut-Injection zu erschweren
+            return url.replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
+        }
+
+
+        /**
+         * Globaler Error Handler für JavaScript-Fehler.
+         */
+        window.onerror = function(message, source, lineno, colno, error) {
+            const errorDetails = `Fehler: ${message}\nQuelle: ${source}\nZeile: ${lineno}, Spalte: ${colno}`;
+            console.error("Globaler Fehler abgefangen:", errorDetails, error);
+            logError(errorDetails, "JavaScript Error", error ? error.stack : undefined);
+            // return true; // Verhindert, dass der Standard-Fehlerhandler des Browsers ausgeführt wird (optional)
+        };
+        
+        /**
+         * Dummy-Funktion für das Logging von Fehlern/Events an ein Backend.
+         */
+        function logError(message, level = "Info", stackTrace = "") {
+            const logEntry = { 
+                timestamp: new Date().toISOString(), 
+                level, 
+                message, 
+                url: window.location.href,
+                userAgent: navigator.userAgent,
+                stack: stackTrace || (new Error().stack) // Generiere Stack Trace, falls nicht vorhanden
+            };
+            console.log(`[LOG - ${level}]`, logEntry);
+            // Hier könnte ein fetch-Aufruf an ein Logging-Backend erfolgen:
+            // fetch('/api/log-event', {
+            //     method: 'POST',
+            //     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken /* CSRF Token mitsenden */ },
+            //     body: JSON.stringify(logEntry)
+            // }).catch(err => console.error("Fehler beim Senden des Logs:", err));
+        }
+
+        /**
+         * Setzt den Inaktivitäts-Timer zurück.
+         */
+        function resetInactivityTimer() {
+            clearTimeout(inactivityTimer);
+            inactivityTimer = setTimeout(() => {
+                showMessage("Sitzung abgelaufen", "Ihre Sitzung ist aufgrund von Inaktivität abgelaufen. Um Ihre Daten zu schützen, werden Sie in Kürze ausgeloggt oder die Seite wird neu geladen.");
+                logError("Sitzung aufgrund von Inaktivität abgelaufen.", "Security Event");
+                // Hier könnte eine Logout-Funktion oder ein Neuladen der Seite implementiert werden.
+                // Für eine Checkout-Seite ist es wichtig, den aktuellen Warenkorb/Auswahl zu leeren oder serverseitig zu invalidieren.
+                // Beispiel: setTimeout(() => { /* logoutUser(); */ window.location.reload(); }, 10000);
+            }, INACTIVITY_TIMEOUT);
+        }
+        
+        // Event Listener für Benutzeraktivität
+        ['mousemove', 'mousedown', 'keypress', 'scroll', 'touchstart', 'visibilitychange'].forEach(event => {
+            window.addEventListener(event, resetInactivityTimer, { passive: true });
+        });
+
+
+        // --- Bestehende Anwendungslogik (Kernfunktionen bleiben erhalten, Sicherheitsaspekte integriert) ---
+        let baseProductName = 'Bo6/Wz Accounts – Phone Verified'; 
+        let baseProductDescription = 'Wählen Sie Ihr gewünschtes Pack für exklusive Vorteile.';
+        let baseProductImage = '';
+        let currentSelectedPack = null; 
+
+        // productPacks ist die einzige Quelle für Produkt- und Preisinformationen im Frontend.
+        const productPacks = Object.freeze([ 
+            { quantity: 3, nameSuffix: '3er Accountpack', price: 2.49 },
+            { quantity: 5, nameSuffix: '5er Accountpack', price: 3.95 },
+            { quantity: 10, nameSuffix: '10er Accountpack', price: 7.75 },
+            { quantity: 20, nameSuffix: '20er Accountpack', price: 14.95 }
+        ]);
+
+        const modal = document.getElementById('messageModal');
+        const modalCloseButtonX = document.getElementById('modalCloseButton'); // ID für X-Button im Modal
+        const dropdownTrigger = document.getElementById('dropdownTrigger');
+        const dropdownMenu = document.getElementById('dropdownMenu');
+        const dropdownArrow = document.getElementById('dropdownArrow');
+        const selectedPackNameDisplay = document.getElementById('selectedPackNameDisplay');
+
+        const canvas = document.getElementById('particleCanvas');
+        const ctx = canvas.getContext('2d');
+        let particlesArray;
+
+        const particleColor = 'rgba(0, 255, 80, 0.7)'; 
+        const lineColor = 'rgba(0, 255, 80, 0.15)'; 
+
+        function setCanvasSize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        class Particle {
+            constructor(x, y, directionX, directionY, size) {
+                this.x = x;
+                this.y = y;
+                this.directionX = directionX;
+                this.directionY = directionY;
+                this.size = size;
+                this.color = particleColor;
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2, false);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+            }
+            update() {
+                if (this.x + this.size > canvas.width || this.x - this.size < 0) {
+                    this.directionX = -this.directionX;
+                }
+                if (this.y + this.size > canvas.height || this.y - this.size < 0) {
+                    this.directionY = -this.directionY;
+                }
+                this.x += this.directionX;
+                this.y += this.directionY;
+                this.draw();
+            }
+        }
+
+        function initParticles() {
+            particlesArray = [];
+            let particleDensityFactor = window.innerWidth < 768 ? 18000 : 9000;
+            let numberOfParticles = (canvas.height * canvas.width) / particleDensityFactor; 
+            if (numberOfParticles > (window.innerWidth < 768 ? 75 : 150) ) { 
+                 numberOfParticles = (window.innerWidth < 768 ? 75 : 150);
+            }
+            for (let i = 0; i < numberOfParticles; i++) {
+                let size = (Math.random() * 2) + 0.5; 
+                let x = (Math.random() * ((innerWidth - size * 2) - (size * 2)) + size * 2);
+                let y = (Math.random() * ((innerHeight - size * 2) - (size * 2)) + size * 2);
+                let directionX = (Math.random() * .3) - .15; 
+                let directionY = (Math.random() * .3) - .15;
+                particlesArray.push(new Particle(x, y, directionX, directionY, size));
+            }
+        }
+
+        function connectParticles() {
+            let opacityValue = 1;
+            let connectDistanceFactor = window.innerWidth < 768 ? 10 : 7;
+            for (let a = 0; a < particlesArray.length; a++) {
+                for (let b = a; b < particlesArray.length; b++) {
+                    let distance = ((particlesArray[a].x - particlesArray[b].x) * (particlesArray[a].x - particlesArray[b].x))
+                                 + ((particlesArray[a].y - particlesArray[b].y) * (particlesArray[a].y - particlesArray[b].y));
+                    if (distance < (canvas.width/connectDistanceFactor) * (canvas.height/connectDistanceFactor)) { 
+                        opacityValue = 1 - (distance/20000); 
+                        ctx.strokeStyle = lineColor.replace('0.15', Math.max(0, Math.min(0.15, opacityValue)).toFixed(2) ); 
+                        ctx.lineWidth = 0.6; 
+                        ctx.beginPath();
+                        ctx.moveTo(particlesArray[a].x, particlesArray[a].y);
+                        ctx.lineTo(particlesArray[b].x, particlesArray[b].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        function animateParticles() {
+            requestAnimationFrame(animateParticles);
+            ctx.clearRect(0,0,innerWidth, innerHeight);
+            for (let i = 0; i < particlesArray.length; i++) {
+                particlesArray[i].update();
+            }
+            connectParticles();
+        }
+
+
+        function showMessage(title, text) {
+            document.getElementById('messageModalTitle').textContent = sanitizeForTextDisplay(title); 
+            document.getElementById('messageModalText').textContent = sanitizeForTextDisplay(text);   
+            modal.style.display = 'flex';
+        }
+        
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+        
+        // Event Listener für Modal-Schließen-Buttons (statt inline onclick)
+        if(modalCloseButtonX) modalCloseButtonX.addEventListener('click', closeModal);
+        document.getElementById('closeModalButton').addEventListener('click', closeModal);
+
+
+        function updateProductDisplay(selectedPack) {
+            const validPack = productPacks.find(p => p.quantity === selectedPack.quantity && p.nameSuffix === selectedPack.nameSuffix);
+            if (!validPack) {
+                logError("Ungültiges Pack-Objekt in updateProductDisplay versucht.", "Error", JSON.stringify(selectedPack));
+                showMessage("Fehler", "Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.");
+                return;
+            }
+            currentSelectedPack = validPack; 
+            
+            const displayedProductNameEl = document.getElementById('displayedProductName');
+            const displayedProductDescriptionEl = document.getElementById('displayedProductDescription');
+            const displayedProductPriceEl = document.getElementById('displayedProductPrice');
+
+            const totalPrice = currentSelectedPack.price; 
+
+            displayedProductNameEl.textContent = baseProductName; 
+            displayedProductDescriptionEl.textContent = currentSelectedPack.nameSuffix; 
+            displayedProductPriceEl.textContent = `€${totalPrice.toFixed(2)}`;
+            
+            selectedPackNameDisplay.textContent = `${currentSelectedPack.nameSuffix} (€${currentSelectedPack.price.toFixed(2)})`;
+
+            // CSRF-Token und Pack-Daten in versteckte Formularfelder schreiben (für Backend-Übermittlung)
+            const csrfInput = document.getElementById('csrfTokenInput');
+            if (csrfInput) csrfInput.value = csrfToken;
+            const packQuantityInput = document.getElementById('selectedPackQuantityInput');
+            if (packQuantityInput) packQuantityInput.value = currentSelectedPack.quantity;
+            const packPriceInput = document.getElementById('selectedPackPriceInput');
+            if (packPriceInput) packPriceInput.value = currentSelectedPack.price.toFixed(2);
+
+
+            const items = dropdownMenu.querySelectorAll('.dropdown-item');
+            items.forEach(item => item.classList.remove('selected'));
+            const selectedItem = dropdownMenu.querySelector(`[data-quantity='${currentSelectedPack.quantity}']`);
+            if (selectedItem) {
+                selectedItem.classList.add('selected');
+            }
+        }
+
+        function toggleDropdown() {
+            const isOpenCurrently = dropdownMenu.classList.contains('is-open');
+            dropdownMenu.classList.toggle('is-open', !isOpenCurrently);
+            dropdownArrow.classList.toggle('is-open', !isOpenCurrently);
+            dropdownTrigger.classList.toggle('is-open', !isOpenCurrently);
+        }
+
+        function createPackOptions() {
+            dropdownMenu.innerHTML = ''; 
+
+            productPacks.forEach((pack) => {
+                const item = document.createElement('div');
+                item.className = 'dropdown-item';
+                item.dataset.quantity = pack.quantity; 
+
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'item-name';
+                nameSpan.textContent = pack.nameSuffix; 
+
+                const priceSpan = document.createElement('span');
+                priceSpan.className = 'item-price';
+                priceSpan.textContent = `€${pack.price.toFixed(2)}`; 
+                
+                item.appendChild(nameSpan);
+                item.appendChild(priceSpan);
+                
+                item.addEventListener('click', () => {
+                    updateProductDisplay(pack); 
+                    toggleDropdown(); 
+                });
+                dropdownMenu.appendChild(item);
+            });
+        }
+
+        window.onload = function() {
+            checkHTTPS(); 
+            resetInactivityTimer(); 
+            csrfToken = generateCsrfToken(); 
+            const csrfInput = document.getElementById('csrfTokenInput');
+            if (csrfInput) {
+                csrfInput.value = csrfToken;
+            }
+
+            setCanvasSize(); 
+            initParticles(); 
+            animateParticles(); 
+
+            const params = new URLSearchParams(window.location.search);
+            
+            let rawProductName = params.get('produktName');
+            baseProductName = rawProductName ? sanitizeForTextDisplay(rawProductName) : baseProductName;
+            
+            let rawDescription = params.get('beschreibung');
+            let initialDescription = rawDescription ? sanitizeForTextDisplay(rawDescription) : baseProductDescription;
+
+            let rawBildUrl = params.get('bildUrl');
+            baseProductImage = sanitizeUrl(rawBildUrl || ''); 
+
+            document.getElementById('displayedProductName').textContent = baseProductName;
+            document.getElementById('displayedProductDescription').textContent = initialDescription;
+
+            const imageContainer = document.getElementById('productImageContainer');
+            const svgIcon = imageContainer.querySelector('svg');
+            if (baseProductImage) { 
+                const img = document.createElement('img');
+                img.src = baseProductImage; 
+                img.alt = baseProductName; // Alt-Text wird ebenfalls durch sanitizeForTextDisplay geschützt, da baseProductName bereinigt ist
+                img.onerror = function() {
+                    img.style.display = 'none';
+                    if(svgIcon) svgIcon.style.display = 'block';
+                    logError(`Fehler beim Laden des Produktbildes: ${baseProductImage}`, "Warning");
+                };
+                img.onload = function() {
+                     if(svgIcon) svgIcon.style.display = 'none';
+                }
+                imageContainer.innerHTML = ''; 
+                imageContainer.appendChild(img); 
+            } else {
+                if(svgIcon) svgIcon.style.display = 'block';
+            }
+
+            createPackOptions();
+            if (productPacks.length > 0) {
+                updateProductDisplay(productPacks[0]); 
+            }
+
+            document.getElementById('currentYear').textContent = new Date().getFullYear();
+            
+            const companyNameElement = document.querySelector('footer p');
+            if (companyNameElement) {
+                companyNameElement.innerHTML = `&copy; <span id="currentYear">${new Date().getFullYear()}</span> Ihr Premium Anbieter. Alle Rechte vorbehalten.`;
+            }
+
+            dropdownTrigger.addEventListener('click', toggleDropdown);
+
+            // Event Listener für Zahlungsbuttons
+            document.getElementById('paypalButton').addEventListener('click', handlePayPal);
+            document.getElementById('cryptoButton').addEventListener('click', handleCrypto);
+
+
+            document.addEventListener('click', function(event) {
+                const isClickInsideDropdown = dropdownTrigger.contains(event.target) || dropdownMenu.contains(event.target);
+                if (!isClickInsideDropdown && dropdownMenu.classList.contains('is-open')) { 
+                    toggleDropdown();
+                }
+            });
+        };
+        
+        window.addEventListener('resize', () => {
+            setCanvasSize();
+            initParticles(); 
+        });
+
+        /**
+         * Behandelt einen Zahlungsversuch und implementiert einfaches Rate-Limiting.
+         * @returns {boolean} True, wenn der Versuch erlaubt ist, sonst False.
+         */
+        function handlePaymentAttempt() {
+            const now = Date.now();
+            if (now - firstPaymentAttemptTimestamp > PAYMENT_ATTEMPT_WINDOW) {
+                paymentAttempts = 0;
+                firstPaymentAttemptTimestamp = 0;
+            }
+
+            if (paymentAttempts === 0) {
+                firstPaymentAttemptTimestamp = now;
+            }
+            paymentAttempts++;
+
+            if (paymentAttempts > MAX_PAYMENT_ATTEMPTS) {
+                showMessage("Zu viele Versuche", "Sie haben zu oft versucht zu bezahlen. Bitte warten Sie einen Moment und versuchen Sie es später erneut.");
+                logError("Maximale Zahlungsversuche überschritten.", "Security Event");
+                return false; 
+            }
+            return true; 
+        }
+
+
+        function handlePayPal() {
+            if (!handlePaymentAttempt()) return; 
+
+            const paymentData = {
+                paymentMethod: 'paypal',
+                productQuantity: currentSelectedPack ? currentSelectedPack.quantity : null,
+                productNameSuffix: currentSelectedPack ? currentSelectedPack.nameSuffix : null,
+                productPrice: currentSelectedPack ? currentSelectedPack.price : null,
+                csrf_token: csrfToken,
+            };
+            console.log("Sende PayPal Zahlungsanfrage (Dummy):", paymentData);
+            logError(`PayPal-Zahlung initiiert für: ${currentSelectedPack ? currentSelectedPack.nameSuffix : 'kein Pack'}`, "Info");
+
+            showMessage('PayPal Zahlung', `Sie haben "${currentSelectedPack ? currentSelectedPack.nameSuffix : 'kein Pack'}" für €${currentSelectedPack ? currentSelectedPack.price.toFixed(2) : '0.00'} ausgewählt. Weiterleitung zu PayPal wird initialisiert...`);
+            // Hier würde die echte PayPal-Integration erfolgen, z.B.
+            // const form = document.getElementById('paymentForm');
+            // // Weitere Daten zum Formular hinzufügen, falls nötig
+            // form.action = '/api/initiate-paypal-payment'; // Beispiel-Endpunkt
+            // form.method = 'POST';
+            // form.submit(); // Formular absenden
+        }
+
+        function handleCrypto() {
+            if (!handlePaymentAttempt()) return; 
+
+            const paymentData = {
+                paymentMethod: 'crypto',
+                productQuantity: currentSelectedPack ? currentSelectedPack.quantity : null,
+                productNameSuffix: currentSelectedPack ? currentSelectedPack.nameSuffix : null,
+                productPrice: currentSelectedPack ? currentSelectedPack.price : null,
+                csrf_token: csrfToken,
+            };
+            console.log("Sende Krypto Zahlungsanfrage (Dummy):", paymentData);
+            logError(`Krypto-Zahlung initiiert für: ${currentSelectedPack ? currentSelectedPack.nameSuffix : 'kein Pack'}`, "Info");
+            
+            showMessage('Kryptowährung', `Sie haben "${currentSelectedPack ? currentSelectedPack.nameSuffix : 'kein Pack'}" für €${currentSelectedPack ? currentSelectedPack.price.toFixed(2) : '0.00'} ausgewählt. Details zur Zahlung mit Kryptowährung werden angezeigt...`);
+            // Hier würde die Anzeige von Wallet-Informationen oder die Integration mit einem Krypto-Zahlungsdienstleister erfolgen.
+        }
+    </script>
+
+</body>
+</html>
