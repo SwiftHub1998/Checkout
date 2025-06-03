@@ -4,62 +4,39 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+    <!-- 
+        Diese CSP ist restriktiv. 'unsafe-inline' für script-src ist für die Inline-Skripte (Partikel & Hauptlogik) notwendig.
+        Für eine Produktion ohne 'unsafe-inline' müssten diese Skripte ausgelagert und mit Hashes/Nonces versehen werden.
+        PayPal SDK Skripte werden von paypal.com geladen.
+    -->
     <meta http-equiv="Content-Security-Policy" 
           content="default-src 'self'; 
-                   script-src 'self' https://cdn.tailwindcss.com 'unsafe-inline'; 
+                   script-src 'self' https://cdn.tailwindcss.com https://www.paypal.com https://www.sandbox.paypal.com 'unsafe-inline'; 
                    style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; 
                    font-src 'self' https://fonts.gstatic.com; 
-                   img-src 'self' https://placehold.co data:; 
-                   connect-src 'self'; /* Erlaube Verbindungen zum eigenen Ursprung (z.B. für Logging-API) */
-                   frame-ancestors 'none'; /* Verhindert Einbetten in Frames/Iframes (Clickjacking-Schutz) */
-                   object-src 'none'; /* Verhindert <object>, <embed>, <applet> */
-                   base-uri 'self'; /* Beschränkt <base> URLs */
-                   form-action 'self'; /* Beschränkt Formular-Ziele */
+                   img-src 'self' https://placehold.co https://i.ibb.co https://www.paypalobjects.com data:;
+                   connect-src 'self' https://api.sandbox.paypal.com https://api.paypal.com wss:;
+                   frame-src https://www.sandbox.paypal.com https://www.paypal.com; 
+                   frame-ancestors 'none'; 
+                   object-src 'none';
+                   base-uri 'self';
+                   form-action 'self';
                    upgrade-insecure-requests;">
 
     <meta http-equiv="X-Frame-Options" content="DENY">
 
     <meta http-equiv="Permissions-Policy" 
-          content="camera=(), 
-                   microphone=(), 
-                   geolocation=(), 
-                   payment=(), 
-                   usb=(), 
-                   bluetooth=(), 
-                   magnetometer=(), 
-                   gyroscope=(), 
-                   accelerometer=(),
-                   autoplay=(),
-                   display-capture=(),
-                   document-domain=(),
-                   encrypted-media=(),
-                   fullscreen=(),
-                   interest-cohort=(),
-                   midi=(),
-                   picture-in-picture=(),
-                   publickey-credentials-get=(),
-                   screen-wake-lock=(),
-                   sync-xhr=(),
-                   xr-spatial-tracking=()">
+          content="camera=(), microphone=(), geolocation=(), payment=(), usb=(), bluetooth=(), magnetometer=(), gyroscope=(), accelerometer=(), autoplay=(), display-capture=(), document-domain=(), encrypted-media=(), fullscreen=(self https://www.sandbox.paypal.com https://www.paypal.com), interest-cohort=(), midi=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), sync-xhr=(), xr-spatial-tracking=()">
     
-    <!-- 
-        Strict-Transport-Security (HSTS): Erzwingt HTTPS nach dem ersten Besuch.
-        Beispiel: Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
-
-        X-Content-Type-Options: Verhindert MIME-Sniffing.
-        Beispiel: X-Content-Type-Options: nosniff
-
-        Referrer-Policy: Kontrolliert, welche Referrer-Informationen gesendet werden.
-        Beispiel: Referrer-Policy: strict-origin-when-cross-origin
-    -->
-
     <title>Checkout – Ihr exklusiver Einkauf</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <script src="https://www.paypal.com/sdk/js?client-id=Adtsa6HsI1txfXdTQcrT7gJxDF69eXOV38Spbsss7U7OWMD3BbxzjgeWIE55oquM6swDb6BFlnogx7iw&currency=EUR&disable-funding=card,giropay,sofort&commit=true" defer></script>
     
-    <style>
+    <style id="main-checkout-styles">
         body {
             font-family: 'Inter', sans-serif;
             background-color: #030703; 
@@ -117,7 +94,6 @@
             stroke: rgba(0, 255, 100, 0.7); 
          }
 
-
         .button-base {
             border-radius: 10px; 
             font-weight: 500; 
@@ -131,18 +107,13 @@
             letter-spacing: 0.025em; 
             min-height: 44px; 
         }
-
-        .button-paypal { 
-            background-color: #00DF50; 
-            color: #030703; 
-            box-shadow: 0 2px 8px rgba(0, 223, 80, 0.3); 
+        
+        /* PayPal Button Container - wird vom SDK befüllt */
+        #paypal-button-container {
+            margin-top: 20px; /* Wie vom User vorgegeben */
+            min-height: 50px; 
         }
-        .button-paypal:hover {
-            background-color: #00B843; 
-            transform: translateY(-1.5px) scale(1.01); 
-            box-shadow: 0 4px 12px rgba(0, 223, 80, 0.4);
-        }
-
+        
         .button-crypto { 
             background-color: rgba(0, 255, 100, 0.1); 
             color: #90EE90; 
@@ -155,11 +126,9 @@
             transform: translateY(-1.5px) scale(1.01);
             box-shadow: 0 4px 12px rgba(0, 255, 100, 0.1);
         }
-        .button-paypal svg, .button-crypto svg { 
-            fill: currentColor; 
+         .button-crypto svg { 
             stroke: currentColor; 
         }
-
 
         .text-header { color: #E0FFE0; } 
         .text-subheader { color: #70A070; } 
@@ -265,7 +234,6 @@
         .dropdown-item.selected .item-price {
             color: #B0D0B0;
         }
-
     </style>
 </head>
 <body>
@@ -313,12 +281,10 @@
                 <input type="hidden" name="csrf_token" id="csrfTokenInput" value="">
                 <input type="hidden" name="selected_pack_quantity" id="selectedPackQuantityInput" value="">
                 <input type="hidden" name="selected_pack_price" id="selectedPackPriceInput" value="">
+                <input type="hidden" name="order_id_paypal" id="orderIdPaypalInput" value="">
             </form>
             <div class="space-y-3 sm:space-y-3.5"> 
-                <button id="paypalButton" class="button-base button-paypal w-full">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8.332 20.657c.52 0 .981-.136 1.383-.407.026.135.055.268.087.398.101.397.255.77.46 1.118.566.963 1.42 1.629 2.557 1.998.286.093.582.14.886.14.99 0 1.882-.494 2.45-1.328.423-.622.638-1.38.638-2.277 0-1.242-.502-2.294-1.508-3.157-.992-.85-2.32-1.277-3.988-1.277h-1.228c-.211 0-.397-.023-.558-.07a1.53 1.53 0 0 1-.56-.265c-.157-.13-.281-.316-.372-.558-.093-.242-.14-.533-.14-.874 0-.503.164-.91.492-1.22.328-.308.764-.463 1.308-.463.493 0 .91.112 1.25.338.342.226.606.534.794.925.046.093.102.183.168.27.066.087.145.16.237.217l1.682-1.01c-.14-.23-.297-.445-.47-.646a4.23 4.23 0 0 0-.687-.708 4.394 4.394 0 0 0-.85-.552 4.172 4.172 0 0 0-.98-.345 4.279 4.279 0 0 0-1.065-.118c-1.31 0-2.363.472-3.157 1.417-.795.945-1.192 2.162-1.192 3.65 0 .91.273 1.72.82 2.43.545.708 1.32 1.193 2.324 1.45l-.224.046c-.44.078-.836.117-1.187.117Z"/><path d="M10.02 11.085c.52 0 .98-.136 1.383-.407.026.135.055.268.087.398.101.397.255.77.46 1.118.566.963 1.42 1.629 2.557 1.998.286.093.582.14.886.14.99 0 1.882-.494 2.45-1.328.423-.622.638-1.38.638-2.277 0-1.242-.502-2.294-1.508-3.157-.992-.85-2.32-1.277-3.988-1.277h-1.228c-.211 0-.397-.023-.558-.07a1.53 1.53 0 0 1-.56-.265c-.157-.13-.281-.316-.372-.558-.093-.242-.14-.533-.14-.874 0-.503.164-.91.492-1.22.328-.308.764-.463 1.308-.463.493 0 .91.112 1.25.338.342.226.606.534.794.925.046.093.102.183.168.27.066.087.145.16.237.217l1.682-1.01c-.14-.23-.297-.445-.47-.646a4.23 4.23 0 0 0-.687-.708 4.394 4.394 0 0 0-.85-.552 4.172 4.172 0 0 0-.98-.345 4.279 4.279 0 0 0-1.065-.118c-1.31 0-2.363.472-3.157 1.417C3.27 7.21 2.873 8.428 2.873 9.915c0 .91.273 1.72.82 2.43.545.708 1.32 1.193 2.324 1.45l-.224.046c-.44.078-.836.117-1.187.117H3.33c-.52 0-.98-.136-1.383-.407a2.409 2.409 0 0 1-.087-.398 2.43 2.43 0 0 1-.46-1.118C.834 10.93.003 9.79.003 8.43c0-.99.493-1.882 1.328-2.45.622-.424 1.38-.638 2.277-.638 1.242 0 2.294.502 3.157 1.508.85.992 1.277 2.32 1.277 3.988v1.228c0 .21-.023.397-.07.558a1.53 1.53 0 0 1-.265.56c-.13.157-.316.281-.558.372-.242.093-.533.14-.874.14Z" transform="translate(2.484 1.343)"/></svg>
-                    <span>PayPal</span>
-                </button>
+                <div id="paypal-button-container" style="margin-top: 20px;"></div>
 
                 <button id="cryptoButton" class="button-base button-crypto w-full">
                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bitcoin"><path d="M11.767 19.089c3.88.717 7.095-.596 7.095-2.367 0-1.423-1.938-2.388-4.834-2.933-2.895-.545-3.756-.93-3.756-1.622 0-.46.74-.825 2.02-.825 1.215 0 2.055.368 2.837.81.603.337 1.016.762 1.016 1.412 0 .27-.042.505-.123.707l2.242.89c.202-.52.303-1.075.303-1.657 0-1.185-.803-2.122-2.184-2.6-.81-.27-1.738-.405-2.72-.405-3.453 0-6.316 1.002-6.316 3.088 0 1.52.98 2.474 3.518 2.995 2.805.577 3.916.946 3.916 1.672 0 .545-.89.91-2.168.91-1.38 0-2.4-.428-3.164-.93-.585-.383-1.03-.863-1.03-1.528 0-.226.042-.46.124-.673l-2.242-.89a5.23 5.23 0 0 0-.303 1.613c0 1.248.93 2.22 2.44 2.73Z"/><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10Z"/></svg>
@@ -334,14 +300,14 @@
             <div class="modal-content p-5 sm:p-6 rounded-lg shadow-2xl w-11/12 max-w-md mx-auto text-left"> 
                 <div class="flex justify-between items-center mb-4">
                     <h3 id="messageModalTitle" class="text-lg font-medium text-header">Mitteilung</h3>
-                    <button id="modalCloseButton" class="text-gray-500 hover:text-gray-300 transition-colors p-1 -mr-1"> <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    <button id="modalCloseButton" type="button" class="text-gray-500 hover:text-gray-300 transition-colors p-1 -mr-1"> <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </button>
                 </div>
                 <div class="mb-5">
                     <p id="messageModalText" class="text-sm text-body">...</p>
                 </div>
                 <div class="text-right">
-                    <button id="closeModalButton" class="button-base bg-accent hover:bg-green-500 text-black py-2 sm:py-2.5 px-4 sm:px-5 text-xs sm:text-sm"> 
+                    <button id="closeModalButton" type="button" class="button-base bg-accent hover:bg-green-500 text-black py-2 sm:py-2.5 px-4 sm:px-5 text-xs sm:text-sm"> 
                         Verstanden
                     </button>
                 </div>
@@ -351,32 +317,23 @@
 
     <script>
         // --- Globale Variablen und Konstanten für Sicherheit und Funktionalität ---
-        const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 Minuten Inaktivitäts-Timeout
-        const MAX_PAYMENT_ATTEMPTS = 3; // Maximale Zahlungsversuche für Rate Limiting
-        const PAYMENT_ATTEMPT_WINDOW = 5 * 60 * 1000; // Zeitfenster für Rate Limiting (5 Minuten)
+        const INACTIVITY_TIMEOUT = 15 * 60 * 1000; 
+        const MAX_PAYMENT_ATTEMPTS = 3; 
+        const PAYMENT_ATTEMPT_WINDOW = 5 * 60 * 1000; 
 
         let inactivityTimer;
         let paymentAttempts = 0;
         let firstPaymentAttemptTimestamp = 0;
         let devToolsWarningShown = false;
-        let csrfToken = null; // Wird beim Laden generiert
+        let csrfToken = null; 
 
         // --- Sicherheitsfunktionen ---
-
-        /**
-         * Generiert ein einfaches (Dummy) CSRF-Token. 
-         * In einer echten Anwendung würde dieses vom Server kommen und serverseitig validiert werden.
-         */
         function generateCsrfToken() {
-            // Erzeugt einen zufälligen String
             return Array.from(crypto.getRandomValues(new Uint8Array(16)))
                 .map(b => b.toString(16).padStart(2, '0'))
                 .join('');
         }
 
-        /**
-         * Zeigt eine Warnung bei geöffneten Entwicklertools.
-         */
         function showDevToolsWarning() {
             if (!devToolsWarningShown) {
                 showMessage('Sicherheitshinweis', 'Die Nutzung von Entwicklertools auf dieser Seite kann unerwartetes Verhalten oder Sicherheitsrisiken verursachen. Bitte mit Vorsicht verwenden.');
@@ -385,29 +342,15 @@
             }
         }
         
-        // Event Listener für DevTools-Tastenkombinationen
         window.addEventListener('keydown', function(e) {
             if (e.key === "F12" ||
                 (e.ctrlKey && e.shiftKey && (e.key === "I" || e.key === "J" || e.key === "C")) ||
-                (e.metaKey && e.altKey && (e.key === "I" || e.key === "J" || e.key === "C")) // MacOS
+                (e.metaKey && e.altKey && (e.key === "I" || e.key === "J" || e.key === "C")) 
             ) {
-                // e.preventDefault(); // Verhindert das Öffnen nicht zuverlässig und kann legitime Nutzung stören.
                 showDevToolsWarning();
             }
         });
         
-        // Kontextmenü blockieren (Rechtsklick), um "Untersuchen" zu erschweren (kann umgangen werden und die UX beeinträchtigen).
-        // Auskommentiert, da es oft als störend empfunden wird. Bei Bedarf einkommentieren.
-        // window.addEventListener('contextmenu', function(e) {
-        //     e.preventDefault();
-        //     showDevToolsWarning(); 
-        // });
-
-
-        /**
-         * Überprüft, ob die Seite über HTTPS geladen wird.
-         * Zeigt eine Warnung, wenn nicht (außer auf localhost und .local Domains).
-         */
         function checkHTTPS() {
             if (window.location.protocol !== "https:" && 
                 window.location.hostname !== "localhost" && 
@@ -416,17 +359,9 @@
             ) {
                 showMessage("Sicherheitswarnung", "Diese Seite wird nicht über eine sichere HTTPS-Verbindung geladen. Sensible Daten könnten gefährdet sein. Bitte stellen Sie sicher, dass Sie über HTTPS auf diese Seite zugreifen.");
                 logError("Seite nicht über HTTPS geladen.", "Security Warning");
-                // Optional: Umleitung zu HTTPS (kann Probleme verursachen, wenn der Server nicht korrekt konfiguriert ist)
-                // window.location.href = "https:" + window.location.href.substring(window.location.protocol.length);
             }
         }
 
-        /**
-         * Bereinigt einen String, um ihn sicher als Textinhalt anzuzeigen (XSS-Schutz).
-         * Verhindert, dass der String als HTML interpretiert wird, indem Sonderzeichen in HTML-Entitäten umgewandelt werden.
-         * @param {string} input Der zu bereinigende String.
-         * @returns {string} Der bereinigte String oder ein Leerstring bei ungültiger Eingabe.
-         */
         function sanitizeForTextDisplay(input) {
             if (typeof input !== 'string') return ''; 
             const tempDiv = document.createElement('div');
@@ -434,53 +369,40 @@
             return tempDiv.innerHTML;    
         }
         
-        /**
-         * Bereinigt eine URL, um grundlegende XSS-Versuche und unsichere Protokolle zu verhindern.
-         * @param {string} url Die zu bereinigende URL.
-         * @returns {string} Die bereinigte URL oder ein Leerstring.
-         */
         function sanitizeUrl(url) {
             if (typeof url !== 'string' || url.trim() === '') return '';
             const lowerUrl = url.toLowerCase();
             
-            // Whitelist für erlaubte Protokolle (erweitern bei Bedarf)
-            const allowedProtocols = ['http:', 'https:', 'data:image/png', 'data:image/jpeg', 'data:image/gif', 'data:image/webp', 'data:image/svg+xml'];
-            let isValidProtocol = false;
-            try {
-                const parsedUrl = new URL(url, window.location.origin); // Basis-URL für relative Pfade
-                isValidProtocol = allowedProtocols.includes(parsedUrl.protocol);
-            } catch (e) {
-                // Ungültige URL, z.B. "javascript:..." ohne Basis
-                isValidProtocol = allowedProtocols.some(p => lowerUrl.startsWith(p));
+            const allowedProtocols = ['https:', 'data:image/png', 'data:image/jpeg', 'data:image/gif', 'data:image/webp', 'data:image/svg+xml'];
+            if (url.startsWith('http://placehold.co') || url.startsWith('http://i.ibb.co')) {
+                allowedProtocols.push('http:');
             }
 
+            let isValidProtocol = false;
+            try {
+                const parsedUrl = new URL(url, window.location.origin); 
+                isValidProtocol = allowedProtocols.includes(parsedUrl.protocol);
+            } catch (e) {
+                isValidProtocol = allowedProtocols.some(p => lowerUrl.startsWith(p));
+            }
 
             if (!isValidProtocol ||
                 lowerUrl.includes('<script') || 
                 lowerUrl.includes('onerror=') ||
-                lowerUrl.includes('onload=')) { // Zusätzlicher Check für Event-Handler
+                lowerUrl.includes('onload=')) { 
                 console.warn('Sicherheitswarnung: Potenziell gefährliche oder nicht erlaubte URL blockiert:', url);
                 logError(`Blockierte gefährliche/unerlaubte URL: ${url}`, "Security Warning");
-                return `https://placehold.co/60x60/FF0000/FFFFFF?text=Error`; // Fallback-Bild
+                return `https://placehold.co/60x60/FF0000/FFFFFF?text=Error`; 
             }
-            // Einfache Bereinigung von Anführungszeichen, um Attribut-Injection zu erschweren
             return url.replace(/"/g, '&quot;').replace(/'/g, '&#x27;');
         }
 
-
-        /**
-         * Globaler Error Handler für JavaScript-Fehler.
-         */
         window.onerror = function(message, source, lineno, colno, error) {
             const errorDetails = `Fehler: ${message}\nQuelle: ${source}\nZeile: ${lineno}, Spalte: ${colno}`;
             console.error("Globaler Fehler abgefangen:", errorDetails, error);
             logError(errorDetails, "JavaScript Error", error ? error.stack : undefined);
-            // return true; // Verhindert, dass der Standard-Fehlerhandler des Browsers ausgeführt wird (optional)
         };
         
-        /**
-         * Dummy-Funktion für das Logging von Fehlern/Events an ein Backend.
-         */
         function logError(message, level = "Info", stackTrace = "") {
             const logEntry = { 
                 timestamp: new Date().toISOString(), 
@@ -488,44 +410,28 @@
                 message, 
                 url: window.location.href,
                 userAgent: navigator.userAgent,
-                stack: stackTrace || (new Error().stack) // Generiere Stack Trace, falls nicht vorhanden
+                stack: stackTrace || (new Error().stack) 
             };
             console.log(`[LOG - ${level}]`, logEntry);
-            // Hier könnte ein fetch-Aufruf an ein Logging-Backend erfolgen:
-            // fetch('/api/log-event', {
-            //     method: 'POST',
-            //     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken /* CSRF Token mitsenden */ },
-            //     body: JSON.stringify(logEntry)
-            // }).catch(err => console.error("Fehler beim Senden des Logs:", err));
         }
 
-        /**
-         * Setzt den Inaktivitäts-Timer zurück.
-         */
         function resetInactivityTimer() {
             clearTimeout(inactivityTimer);
             inactivityTimer = setTimeout(() => {
                 showMessage("Sitzung abgelaufen", "Ihre Sitzung ist aufgrund von Inaktivität abgelaufen. Um Ihre Daten zu schützen, werden Sie in Kürze ausgeloggt oder die Seite wird neu geladen.");
                 logError("Sitzung aufgrund von Inaktivität abgelaufen.", "Security Event");
-                // Hier könnte eine Logout-Funktion oder ein Neuladen der Seite implementiert werden.
-                // Für eine Checkout-Seite ist es wichtig, den aktuellen Warenkorb/Auswahl zu leeren oder serverseitig zu invalidieren.
-                // Beispiel: setTimeout(() => { /* logoutUser(); */ window.location.reload(); }, 10000);
             }, INACTIVITY_TIMEOUT);
         }
         
-        // Event Listener für Benutzeraktivität
         ['mousemove', 'mousedown', 'keypress', 'scroll', 'touchstart', 'visibilitychange'].forEach(event => {
             window.addEventListener(event, resetInactivityTimer, { passive: true });
         });
 
-
-        // --- Bestehende Anwendungslogik (Kernfunktionen bleiben erhalten, Sicherheitsaspekte integriert) ---
         let baseProductName = 'Bo6/Wz Accounts – Phone Verified'; 
         let baseProductDescription = 'Wählen Sie Ihr gewünschtes Pack für exklusive Vorteile.';
-        let baseProductImage = '';
+        let baseProductImage = 'https://i.ibb.co/mCyyK2rb/Chat-GPT-Image-2-Juni-2025-21-48-43.png'; 
         let currentSelectedPack = null; 
 
-        // productPacks ist die einzige Quelle für Produkt- und Preisinformationen im Frontend.
         const productPacks = Object.freeze([ 
             { quantity: 3, nameSuffix: '3er Accountpack', price: 2.49 },
             { quantity: 5, nameSuffix: '5er Accountpack', price: 3.95 },
@@ -534,7 +440,7 @@
         ]);
 
         const modal = document.getElementById('messageModal');
-        const modalCloseButtonX = document.getElementById('modalCloseButton'); // ID für X-Button im Modal
+        const modalCloseButtonX = document.getElementById('modalCloseButton'); 
         const dropdownTrigger = document.getElementById('dropdownTrigger');
         const dropdownMenu = document.getElementById('dropdownMenu');
         const dropdownArrow = document.getElementById('dropdownArrow');
@@ -637,7 +543,6 @@
             modal.style.display = 'none';
         }
         
-        // Event Listener für Modal-Schließen-Buttons (statt inline onclick)
         if(modalCloseButtonX) modalCloseButtonX.addEventListener('click', closeModal);
         document.getElementById('closeModalButton').addEventListener('click', closeModal);
 
@@ -663,7 +568,6 @@
             
             selectedPackNameDisplay.textContent = `${currentSelectedPack.nameSuffix} (€${currentSelectedPack.price.toFixed(2)})`;
 
-            // CSRF-Token und Pack-Daten in versteckte Formularfelder schreiben (für Backend-Übermittlung)
             const csrfInput = document.getElementById('csrfTokenInput');
             if (csrfInput) csrfInput.value = csrfToken;
             const packQuantityInput = document.getElementById('selectedPackQuantityInput');
@@ -713,6 +617,99 @@
                 dropdownMenu.appendChild(item);
             });
         }
+        
+        function initializePayPalButtons() {
+            if (typeof paypal === 'undefined' || !document.getElementById('paypal-button-container')) {
+                logError("PayPal SDK oder Button-Container nicht gefunden.", "Critical");
+                showMessage("Fehler", "PayPal konnte nicht initialisiert werden. Bitte laden Sie die Seite neu.");
+                return;
+            }
+
+            paypal.Buttons({
+                createOrder: function(data, actions) {
+                    if (!handlePaymentAttempt()) {
+                        return Promise.reject(new Error("Rate limit exceeded for payment attempt."));
+                    }
+                    if (!currentSelectedPack) {
+                        showMessage("Fehler", "Bitte wählen Sie zuerst ein Paket aus, bevor Sie mit PayPal bezahlen.");
+                        logError("PayPal createOrder: Kein Pack ausgewählt.", "Warning");
+                        return Promise.reject(new Error("No pack selected for PayPal payment."));
+                    }
+                    
+                    // WICHTIG: Preis und Details kommen aus dem gesicherten `currentSelectedPack` Objekt.
+                    // Das Backend MUSS diese Informationen anhand einer Pack-ID oder Order-ID erneut validieren.
+                    logEvent(`PayPal createOrder für: ${currentSelectedPack.nameSuffix}`, "Info");
+                    return actions.order.create({
+                        purchase_units: [{
+                            description: sanitizeForTextDisplay(`${baseProductName} - ${currentSelectedPack.nameSuffix}`),
+                            amount: {
+                                currency_code: 'EUR',
+                                value: currentSelectedPack.price.toFixed(2) 
+                            },
+                            // custom_id oder sku könnte hier für die serverseitige Zuordnung verwendet werden
+                            custom_id: sanitizeForTextDisplay(currentSelectedPack.nameSuffix.replace(/\s+/g, '_').toLowerCase() + '_' + currentSelectedPack.quantity) 
+                        }]
+                    });
+                },
+                onApprove: function(data, actions) {
+                    logEvent(`PayPal onApprove: OrderID ${data.orderID}, PayerID ${data.payerID}`, "Info");
+                    const orderIdInput = document.getElementById('orderIdPaypalInput');
+                    if(orderIdInput) orderIdInput.value = sanitizeForTextDisplay(data.orderID);
+
+                    // Hier wird die Zahlung clientseitig "gecaptured".
+                    // In einer echten PROD-Umgebung würde man hier das Backend aufrufen,
+                    // um die Zahlung serverseitig zu capturen und zu validieren.
+                    // Das Backend würde dann auch den Webhook von PayPal erwarten und verarbeiten.
+                    return actions.order.capture().then(function(details) {
+                        logEvent(`PayPal Zahlung erfolgreich (client-captured): OrderID ${data.orderID}, Payer: ${details.payer.name.given_name}`, "Success");
+                        
+                        // Sanitize Payer-Name vor Anzeige
+                        const payerName = details.payer && details.payer.name && details.payer.name.given_name 
+                                          ? sanitizeForTextDisplay(details.payer.name.given_name) 
+                                          : 'Kunde';
+                        const packPrice = currentSelectedPack ? currentSelectedPack.price.toFixed(2) : 'unbekannt';
+
+                        showMessage('Danke, ' + payerName + '!',
+                                    'Deine Zahlung von €' + packPrice + ' war erfolgreich. Wir werden deinen Account liefern.');
+                        
+                        console.log('Zahlungsdetails (client-captured):', details);
+
+                        // BACKEND-SIMULATION:
+                        // Hier würde man das Backend informieren, dass die Zahlung clientseitig genehmigt wurde.
+                        // Das Backend würde dann den Webhook `CHECKOUT.ORDER.APPROVED` abwarten und die Bestellung finalisieren.
+                        // fetch('/api/payment-approved-frontend', {
+                        //     method: 'POST',
+                        //     headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                        //     body: JSON.stringify({
+                        //         orderID: data.orderID,
+                        //         payerID: data.payerID, // Optional
+                        //         details: details, // Nur relevante, nicht-sensitive Teile
+                        //         product: currentSelectedPack
+                        //     })
+                        // }).then(response => response.json())
+                        // .then(backendData => console.log('Backend-Antwort auf Frontend-Genehmigung:', backendData))
+                        // .catch(error => logError('Fehler bei Backend-Benachrichtigung (Frontend-Genehmigung): ' + error.message, "Error"));
+
+                    }).catch(function(err) {
+                        logError(`PayPal Capture Fehler (client-seitig): ${err.message || JSON.stringify(err)}`, "Error");
+                        showMessage('Zahlungsfehler', 'Es gab ein Problem beim Abschluss Ihrer Zahlung. Bitte versuchen Sie es erneut.');
+                    });
+                },
+                onError: function(err) {
+                    logError(`PayPal SDK Fehler: ${err.message || JSON.stringify(err)}`, "Error");
+                    showMessage('Zahlungsfehler', 'Es ist ein Fehler während des Zahlungsvorgangs aufgetreten. Bitte versuchen Sie es erneut.');
+                },
+                onCancel: function(data) {
+                    logEvent(`PayPal Checkout abgebrochen. OrderID: ${data.orderID}`, "Info");
+                    showMessage("Zahlung abgebrochen", "Der Zahlungsvorgang wurde von Ihnen abgebrochen.");
+                }
+            }).render('#paypal-button-container').catch(err => {
+                logError(`Fehler beim Rendern der PayPal Buttons: ${err.message || JSON.stringify(err)}`, "Critical");
+                const paypalContainer = document.getElementById('paypal-button-container');
+                if(paypalContainer) paypalContainer.innerHTML = "<p class='text-red-400 text-sm text-center'>PayPal konnte nicht geladen werden. Bitte versuchen Sie es später erneut.</p>";
+            });
+        }
+
 
         window.onload = function() {
             checkHTTPS(); 
@@ -736,17 +733,17 @@
             let initialDescription = rawDescription ? sanitizeForTextDisplay(rawDescription) : baseProductDescription;
 
             let rawBildUrl = params.get('bildUrl');
-            baseProductImage = sanitizeUrl(rawBildUrl || ''); 
+            baseProductImage = sanitizeUrl(rawBildUrl || baseProductImage); 
 
             document.getElementById('displayedProductName').textContent = baseProductName;
             document.getElementById('displayedProductDescription').textContent = initialDescription;
 
             const imageContainer = document.getElementById('productImageContainer');
             const svgIcon = imageContainer.querySelector('svg');
-            if (baseProductImage) { 
+            if (baseProductImage && !baseProductImage.includes('placehold.co/60x60/FF0000')) { 
                 const img = document.createElement('img');
                 img.src = baseProductImage; 
-                img.alt = baseProductName; // Alt-Text wird ebenfalls durch sanitizeForTextDisplay geschützt, da baseProductName bereinigt ist
+                img.alt = baseProductName; 
                 img.onerror = function() {
                     img.style.display = 'none';
                     if(svgIcon) svgIcon.style.display = 'block';
@@ -759,12 +756,17 @@
                 imageContainer.appendChild(img); 
             } else {
                 if(svgIcon) svgIcon.style.display = 'block';
+                 if (baseProductImage.includes('placehold.co/60x60/FF0000')) { 
+                    logError(`Fallback-Bild (Error-Placeholder) wird verwendet, da sanitizeUrl eine ungültige URL blockiert oder nicht vorhanden war: ${rawBildUrl || 'Keine Bild-URL angegeben'}`, "Warning");
+                }
             }
 
             createPackOptions();
             if (productPacks.length > 0) {
                 updateProductDisplay(productPacks[0]); 
             }
+            
+            initializePayPalButtons(); // PayPal Buttons initialisieren
 
             document.getElementById('currentYear').textContent = new Date().getFullYear();
             
@@ -774,9 +776,9 @@
             }
 
             dropdownTrigger.addEventListener('click', toggleDropdown);
-
-            // Event Listener für Zahlungsbuttons
-            document.getElementById('paypalButton').addEventListener('click', handlePayPal);
+            
+            // Der PayPal-Button wird durch das SDK gerendert, daher kein direkter Event-Listener hier nötig.
+            // Der Krypto-Button behält seinen Listener.
             document.getElementById('cryptoButton').addEventListener('click', handleCrypto);
 
 
@@ -793,10 +795,6 @@
             initParticles(); 
         });
 
-        /**
-         * Behandelt einen Zahlungsversuch und implementiert einfaches Rate-Limiting.
-         * @returns {boolean} True, wenn der Versuch erlaubt ist, sonst False.
-         */
         function handlePaymentAttempt() {
             const now = Date.now();
             if (now - firstPaymentAttemptTimestamp > PAYMENT_ATTEMPT_WINDOW) {
@@ -817,44 +815,24 @@
             return true; 
         }
 
-
-        function handlePayPal() {
-            if (!handlePaymentAttempt()) return; 
-
-            const paymentData = {
-                paymentMethod: 'paypal',
-                productQuantity: currentSelectedPack ? currentSelectedPack.quantity : null,
-                productNameSuffix: currentSelectedPack ? currentSelectedPack.nameSuffix : null,
-                productPrice: currentSelectedPack ? currentSelectedPack.price : null,
-                csrf_token: csrfToken,
-            };
-            console.log("Sende PayPal Zahlungsanfrage (Dummy):", paymentData);
-            logError(`PayPal-Zahlung initiiert für: ${currentSelectedPack ? currentSelectedPack.nameSuffix : 'kein Pack'}`, "Info");
-
-            showMessage('PayPal Zahlung', `Sie haben "${currentSelectedPack ? currentSelectedPack.nameSuffix : 'kein Pack'}" für €${currentSelectedPack ? currentSelectedPack.price.toFixed(2) : '0.00'} ausgewählt. Weiterleitung zu PayPal wird initialisiert...`);
-            // Hier würde die echte PayPal-Integration erfolgen, z.B.
-            // const form = document.getElementById('paymentForm');
-            // // Weitere Daten zum Formular hinzufügen, falls nötig
-            // form.action = '/api/initiate-paypal-payment'; // Beispiel-Endpunkt
-            // form.method = 'POST';
-            // form.submit(); // Formular absenden
-        }
-
         function handleCrypto() {
             if (!handlePaymentAttempt()) return; 
+            if (!currentSelectedPack) {
+                showMessage("Fehler", "Bitte wählen Sie zuerst ein Paket aus.");
+                return;
+            }
 
             const paymentData = {
                 paymentMethod: 'crypto',
-                productQuantity: currentSelectedPack ? currentSelectedPack.quantity : null,
-                productNameSuffix: currentSelectedPack ? currentSelectedPack.nameSuffix : null,
-                productPrice: currentSelectedPack ? currentSelectedPack.price : null,
+                productQuantity: currentSelectedPack.quantity,
+                productNameSuffix: currentSelectedPack.nameSuffix,
+                productPrice: currentSelectedPack.price,
                 csrf_token: csrfToken,
             };
             console.log("Sende Krypto Zahlungsanfrage (Dummy):", paymentData);
-            logError(`Krypto-Zahlung initiiert für: ${currentSelectedPack ? currentSelectedPack.nameSuffix : 'kein Pack'}`, "Info");
+            logError(`Krypto-Zahlung initiiert für: ${currentSelectedPack.nameSuffix}`, "Info");
             
-            showMessage('Kryptowährung', `Sie haben "${currentSelectedPack ? currentSelectedPack.nameSuffix : 'kein Pack'}" für €${currentSelectedPack ? currentSelectedPack.price.toFixed(2) : '0.00'} ausgewählt. Details zur Zahlung mit Kryptowährung werden angezeigt...`);
-            // Hier würde die Anzeige von Wallet-Informationen oder die Integration mit einem Krypto-Zahlungsdienstleister erfolgen.
+            showMessage('Kryptowährung', `Sie haben "${sanitizeForTextDisplay(currentSelectedPack.nameSuffix)}" für €${currentSelectedPack.price.toFixed(2)} ausgewählt. Details zur Zahlung mit Kryptowährung werden angezeigt...`);
         }
     </script>
 
